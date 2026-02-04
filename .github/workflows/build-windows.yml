@@ -2,7 +2,8 @@ name: Build Windows EXE
 
 on:
   push:
-    branches: [ main ]
+    # trigger on both common default branch names so pushes to 'master' or 'main' run the workflow
+    branches: [ main, master ]
   workflow_dispatch: {}
 
 jobs:
