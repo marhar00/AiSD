@@ -1,0 +1,60 @@
+name: Build Windows EXE
+
+on:
+  push:
+    branches: [ main ]
+  workflow_dispatch: {}
+
+jobs:
+  build:
+    name: Build .exe on Windows
+    runs-on: windows-latest
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v4
+        with:
+          python-version: '3.11'
+
+      - name: Install dependencies and PyInstaller
+        shell: pwsh
+        run: |
+          python -m pip install --upgrade pip
+          python -m pip install pyinstaller
+          if (Test-Path requirements.txt) { python -m pip install -r requirements.txt }
+
+      - name: Rename source file to remove spaces (if present)
+        shell: pwsh
+        run: |
+          if (Test-Path 'alpine_expedition copy.py') {
+            Rename-Item -Path 'alpine_expedition copy.py' -NewName 'alpine_expedition.py' -Force
+          }
+
+      - name: Show files (for debugging)
+        shell: pwsh
+        run: |
+          Get-ChildItem -Path . -Recurse -Depth 2 | Select-Object FullName,Length | Format-Table -AutoSize
+
+      - name: Build exe with PyInstaller (onefile)
+        shell: pwsh
+        run: |
+          # make sure the target file exists
+          if (-not (Test-Path 'alpine_expedition.py')) {
+            Write-Error "alpine_expedition.py not found. Ensure your script is present or change the workflow to the correct path."
+            exit 1
+          }
+          pyinstaller --onefile --name alpine_expedition alpine_expedition.py
+
+      - name: Show dist contents
+        shell: pwsh
+        run: |
+          Get-ChildItem -Path dist -Recurse | Select-Object FullName,Length | Format-Table -AutoSize || true
+
+      - name: Upload built .exe
+        uses: actions/upload-artifact@v3
+        with:
+          name: alpine_expedition-windows-exe
+          path: dist/alpine_expedition.exe
